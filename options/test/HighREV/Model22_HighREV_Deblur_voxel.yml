@@ -1,0 +1,78 @@
+# general settings
+name: 0323-Model22-final # add debug for quick debug
+model_type: Nine_ImageEventRestorationModel 
+scale: 1
+num_gpu:  1 #4
+manual_seed: 10
+print_flops: true # TODO: set to true to print flops
+flops_input_shape: # TODO: keep spatial shape to 256x256, and set your own channel for events or images
+  - [3, 256, 256] # image shape
+  - [30, 256, 256] # event shape
+
+datasets:
+  test:
+    name: highrev-val-model22
+    type: VoxelnpzPngSingleDeblurTestDataset
+    # voxel_bins: 6
+    # dataroot: /work/lei_sun/HighREV/val
+    dataroot: /home/work/ssd1/yyq/projects/NTIRE2025/EventDeblur/HighREV/HighREV_test
+    dataroot_voxel: /home/work/ssd1/yyq/projects/NTIRE2025/EventDeblur/HighREV/HighREV_test/voxel30
+
+    gt_size: ~
+    norm_voxel: true  
+
+    io_backend:
+      type: disk
+    
+    use_hflip: false
+    use_rot: false
+
+dataset_name: HighREV
+
+# network structures
+network_g:
+  type: Model22
+  #wf: 64 
+  #fuse_before_downsample: true
+
+# path
+path:
+  pretrain_network_g: basicsr/model_zoo/9_model.pth
+  strict_load_g: true
+  resume_state: ~
+  # root: /work/lei_sun/inference  # set this option ONLY in TEST!!!
+  root: ./  # set this option ONLY in TEST!!!
+
+
+# validation settings
+val:
+  save_img: true  # True for saving results
+  # grids: true  
+  # crop_size: 256 # use it of the gpu memory is not enough for whole image inference
+  # overlap: 128
+  rgb2bgr: true # to my h5 data, its false
+  max_minibatch: 12
+  # tta: 'fh+' # 'fh+' | 'rot90+'
+
+  multi_grids: true
+  crop_sizes: [224, 256, 192]
+  overlaps: [128,128,128]
+  # crop_sizes: [224, ]
+  # overlaps: [128, ]
+
+  # metrics:
+  #   psnr:
+  #     type: calculate_psnr
+  #     crop_border: 0
+  #     test_y_channel: false
+    
+  #   ssim:
+  #     type: calculate_ssim
+  #     crop_border: 0
+  #     test_y_channel: false   
+
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500

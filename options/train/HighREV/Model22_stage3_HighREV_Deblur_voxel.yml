@@ -1,0 +1,126 @@
+# general settings
+name: Model22_stage3_highrev_single_deblur_voxel  # add debug for quick debug
+model_type: ImageEventRestorationModel
+scale: 1
+num_gpu:  1 #4
+manual_seed: 10
+
+datasets:
+  train:
+    name: highrev-train-model22-stage3
+    type: VoxelnpzPngSingleDeblurDa2Dataset
+
+    # dataroot: /work/lei_sun/HighREV/train
+    # dataroot_voxel: /work/lei_sun/HighREV_voxel/train/voxel
+    dataroot: /home/work/nvme1/baolong/EventDeblur/HighREV/train
+    dataroot_voxel: /home/work/nvme1/baolong/EventDeblur/HighREV/train/voxel30
+    windows: 3
+    gt_size: 320
+    # keep true if use events
+    norm_voxel: true
+    use_hflip: true
+    use_rot: true
+
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+      
+    # data loader settings
+    use_shuffle: true
+    num_worker_per_gpu: 8
+    batch_size_per_gpu: 4 # 4 for 2080, 8 for titan
+    dataset_enlarge_ratio: 4  # accelarate, equals to the num_gpu
+    prefetch_mode: cpu
+    num_prefetch_queue: 2
+
+  val:
+    name: highrev-val-model22-stage3
+    type: VoxelnpzPngSingleDeblurDataset
+
+    # dataroot: /work/lei_sun/HighREV/val
+    # dataroot_voxel: /work/lei_sun/HighREV_voxel/val/voxel
+    dataroot: /home/work/nvme1/baolong/EventDeblur/HighREV/val
+    dataroot_voxel: /home/work/nvme1/baolong/EventDeblur/HighREV/val/voxel30
+    windows: 3
+
+    gt_size: ~
+    norm_voxel: true  
+
+    io_backend:
+      type: disk
+    
+    use_hflip: false
+    use_rot: false
+
+dataset_name: HighREV
+
+# network structures
+network_g:
+  type: Model22
+  #wf: 64 
+  #fuse_before_downsample: true
+
+# path
+path:
+  pretrain_network_g: /home/work/nvme1/baolong/EventDeblur/NTIRE2025_EventDeblur_challenge/experiments/Model22_stage2_highrev_single_deblur_voxel/models/net_g_80000.pth
+  strict_load_g: true
+  resume_state: ~
+  training_states: ~ # save current trainig model states, for resume
+
+# training settings
+train:
+  optim_g:
+    type: AdamW
+    lr: !!float 1e-4
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: TrueCosineAnnealingLR
+    T_max: 100000 
+    eta_min: !!float 1e-7
+
+  total_iter: 80000
+  warmup_iter: -1 # no warm up
+
+  # losses
+  pixel_opt:
+    type: PSNRLoss
+    loss_weight: 0.5
+    reduction: mean
+# validation settings
+val:
+  val_freq:  5000 # 2e4
+  save_img: false  
+  grids: ~ 
+  crop_size: ~ # use it of the gpu memory is not enough for whole image inference
+  max_minibatch: 8  
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false   
+
+    psnry:
+      type: calculate_psnry
+      crop_border: 0
+      test_y_channel: true   
+# logging settings
+logger:
+  print_freq: 10
+  save_checkpoint_freq: 5000
+  use_tb_logger: true
+#  wandb:
+#    project: your_project_name
+#    resume_id: x
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
